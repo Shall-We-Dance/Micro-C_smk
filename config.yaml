@@ -16,8 +16,7 @@ alignment:
   aligner: bwa-mem2   # bwa-mem2 or bwa-mem
 
 samples:
-  sampleA_rep1:
-    condition: A
+  sampleA:
     R1:
       - raw/sampleA_rep1_L001_R1.fastq.gz
       - raw/sampleA_rep1_L002_R1.fastq.gz
@@ -25,24 +24,15 @@ samples:
       - raw/sampleA_rep1_L001_R2.fastq.gz
       - raw/sampleA_rep1_L002_R2.fastq.gz
 
-  sampleA_rep2:
-    condition: A
-    R1:
-      - raw/sampleA_rep2_R1.fastq.gz
-    R2:
-      - raw/sampleA_rep2_R2.fastq.gz
-
-  sampleB_rep1:
-    condition: B
+  sampleB:
     R1:
       - raw/sampleB_rep1_R1.fastq.gz
     R2:
       - raw/sampleB_rep1_R2.fastq.gz
 
 fastp:
-  dedup_adapter:
-    dedup: true
-    detect_adapter_for_pe: true
+  dedup: true
+  detect_adapter: true
 
 pairs:
   filter:

@@ -34,8 +34,21 @@ rule fastp_sample_level:
     conda:
         "envs/qc.yaml"
     params:
-        dedup_arg=("--dedup" if bool(config.get("fastp", {}).get("dedup_adapter", {}).get("dedup", True)) else ""),
-        detect_adapter=("--detect_adapter_for_pe" if bool(config.get("fastp", {}).get("dedup_adapter", {}).get("detect_adapter_for_pe", True)) else "")
+        dedup_arg=(
+            "--dedup"
+            if bool(config.get("fastp", {}).get("dedup", config.get("fastp", {}).get("dedup_adapter", {}).get("dedup", True)))
+            else ""
+        ),
+        detect_adapter=(
+            "--detect_adapter_for_pe"
+            if bool(
+                config.get("fastp", {}).get(
+                    "detect_adapter",
+                    config.get("fastp", {}).get("dedup_adapter", {}).get("detect_adapter_for_pe", True),
+                )
+            )
+            else ""
+        )
     shell:
         r"""
         set -euo pipefail
