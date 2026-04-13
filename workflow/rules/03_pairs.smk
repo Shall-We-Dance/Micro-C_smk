@@ -78,11 +78,15 @@ rule filter_pairs:
         EXPR='(pair_type=="UU") and (mapq1>={params.mapq}) and (mapq2>={params.mapq})'
 
         if [ "{params.min_dist}" -gt 0 ]; then
-          EXPR="$EXPR and ((chrom1!=chrom2) or (abs(pos1-pos2)>={params.min_dist}))"
+          # pairtools select uses a restricted eval context where Python builtins
+          # (e.g. abs) may be unavailable in some versions. Use a builtin-free
+          # absolute-distance check to avoid NameError at runtime.
+          EXPR="$EXPR and ((chrom1!=chrom2) or ((pos1-pos2>={params.min_dist}) or (pos2-pos1>={params.min_dist})))"
         fi
 
-        pairtools select "$EXPR" {input.dedup} \
-          | pairtools split --output-pairs {output.pairs} > {log} 2>&1
+        # capture stderr from both select and split in a single log
+        pairtools select "$EXPR" {input.dedup} 2>> {log} \
+          | pairtools split --output-pairs {output.pairs} >> {log} 2>&1
 
         if [ -n "{params.blacklist}" ]; then
           pairtools restrict -f {params.blacklist} {output.pairs} -o {output.pairs}.tmp >> {log} 2>&1
