@@ -15,6 +15,7 @@ rule parse_bam_to_pairs:
         set -euo pipefail
         mkdir -p $(dirname {output.pairsam}) $(dirname {log})
         pairtools parse --chroms-path {params.chromsizes} --drop-sam --nproc-in {threads} --nproc-out {threads} \
+          --add-columns mapq \
           {input.bam} -o {output.pairsam} > {log} 2>&1
         """
 
