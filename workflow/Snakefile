@@ -2,8 +2,27 @@ import os
 
 configfile: "config.yaml"
 
-SAMPLES = list(config["samples"].keys())
-OUTDIR = config["output"]["dir"]
-KEEP_BAM = bool(config.get("output", {}).get("keep_bam", False))
+SAMPLES = sorted(list(config["samples"].keys()))
+OUTDIR = config.get("output", {}).get("dir", "results")
 
-include: "rules/qc_fastp.smk"
+include: "rules/common.smk"
+include: "rules/00_samples.smk"
+include: "rules/01_qc_trim.smk"
+include: "rules/02_align.smk"
+include: "rules/03_pairs.smk"
+include: "rules/04_matrix.smk"
+include: "rules/05_qc_plots.smk"
+include: "rules/06_features.smk"
+include: "rules/07_differential_integrative.smk"
+
+rule all:
+    input:
+        f"{OUTDIR}/metadata/sample_sheet.validated.tsv",
+        expand(f"{OUTDIR}/qc/fastp/{{sample}}/fastp.html", sample=SAMPLES),
+        expand(f"{OUTDIR}/pairs/filtered/{{sample}}.filtered.pairs.gz", sample=SAMPLES),
+        expand(f"{OUTDIR}/matrices/{{sample}}.mcool", sample=SAMPLES),
+        expand(f"{OUTDIR}/features/{{sample}}/compartments.bedgraph", sample=SAMPLES),
+        expand(f"{OUTDIR}/features/{{sample}}/boundaries.bed", sample=SAMPLES),
+        expand(f"{OUTDIR}/features/{{sample}}/loops.bedpe", sample=SAMPLES),
+        f"{OUTDIR}/integrative/differential_summary.tsv",
+        f"{OUTDIR}/qc/multiqc/multiqc_report.html"

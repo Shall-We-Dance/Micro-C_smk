@@ -1,5 +1,4 @@
-name: qc
+name: multiqc
 channels: [conda-forge, bioconda]
 dependencies:
-  - fastp
-  - seqkit
+  - multiqc

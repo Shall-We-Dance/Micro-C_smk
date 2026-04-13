@@ -1,0 +1,9 @@
+name: cooltools
+channels: [conda-forge, bioconda]
+dependencies:
+  - python=3.11
+  - cooler
+  - cooltools
+  - coolpuppy
+  - matplotlib
+  - pandas

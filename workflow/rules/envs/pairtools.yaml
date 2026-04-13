@@ -1,0 +1,7 @@
+name: pairtools
+channels: [conda-forge, bioconda]
+dependencies:
+  - python=3.11
+  - pairtools
+  - pairix
+  - pbgzip
