@@ -1,0 +1,26 @@
+threads:
+  fastp: 8
+  samtools: 8
+  seqkit: 4
+
+reference:
+
+samples:
+  sampleA:
+    R1:
+      - "raw/sampleA_L001_R1.fastq.gz"
+      - "raw/sampleA_L002_R1.fastq.gz"
+    R2:
+      - "raw/sampleA_L001_R2.fastq.gz"
+      - "raw/sampleA_L002_R2.fastq.gz"
+
+  sampleB:
+    R1:
+      - "raw/sampleB_R1.fastq.gz"
+    R2:
+      - "raw/sampleB_R2.fastq.gz"
+
+fastp:
+  # dedup + adapter trimming
+  dedup_adapter:
+    dedup: true

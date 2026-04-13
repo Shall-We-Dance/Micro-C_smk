@@ -1,0 +1,9 @@
+import os
+
+configfile: "config.yaml"
+
+SAMPLES = list(config["samples"].keys())
+OUTDIR = config["output"]["dir"]
+KEEP_BAM = bool(config.get("output", {}).get("keep_bam", False))
+
+include: "rules/qc_fastp.smk"
