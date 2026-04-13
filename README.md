@@ -4,6 +4,12 @@ A modular Snakemake implementation for end-to-end Micro-C processing, from raw F
 
 ## Overview
 
+### Inputs
+
+### Outputs
+
+## Pipeline Steps
+
 1. **Sample sheet / metadata validation**
    - Validates paired-end lane definitions from `config.yaml`.
    - Writes `results/metadata/sample_sheet.validated.tsv`.
@@ -55,8 +61,6 @@ A modular Snakemake implementation for end-to-end Micro-C processing, from raw F
 13. **Differential / integrative analysis scaffold**
     - Produces a summary table with hooks to extend condition-wise differential analyses.
 
----
-
 ## Repository layout
 
 ```text
@@ -85,7 +89,7 @@ Edit `config.yaml`:
 - `pairs.filter.*`: filtering logic (MAPQ, blacklist, short-distance artifact threshold).
 - `matrix.*`: base resolution, multires resolutions, optional hic export.
 
-## Run
+## Running the workflow
 
 ```bash
 snakemake -s workflow/Snakefile --use-conda --cores 32
