@@ -3,7 +3,6 @@ output:
 
 threads:
   fastp: 8
-  seqkit: 4
   bwa: 16
   pairtools: 12
   cooler: 8

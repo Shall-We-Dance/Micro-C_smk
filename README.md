@@ -8,54 +8,51 @@ A modular Snakemake implementation for end-to-end Micro-C processing, from raw F
    - Validates paired-end lane definitions from `config.yaml`.
    - Writes `results/metadata/sample_sheet.validated.tsv`.
 
-2. **FASTQ QC**
-   - `seqkit stats` on raw and cleaned reads.
-
-3. **Adapter / quality trimming**
+2. **Adapter / quality trimming**
    - `fastp` at sample-level (after lane concatenation).
 
-4. **Alignment to genome (BWA-MEM/BWA-MEM2)**
+3. **Alignment to genome (BWA-MEM/BWA-MEM2)**
    - Configurable aligner: `bwa mem` or `bwa-mem2 mem`.
    - Name-sorted BAM output.
 
-5. **Parse BAM/SAM to contact pairs**
+4. **Parse BAM/SAM to contact pairs**
    - `pairtools parse`.
 
-6. **Sort pairs**
+5. **Sort pairs**
    - `pairtools sort`.
 
-7. **Deduplicate pairs**
+6. **Deduplicate pairs**
    - `pairtools dedup` with per-sample dedup stats.
 
-8. **Filter pairs**
+7. **Filter pairs**
    - Keep unique/high-quality contacts (`pair_type==UU`, MAPQ threshold).
    - Optional blacklist restriction.
    - Optional short-cis artifact filtering.
 
-9. **Generate stats and MultiQC**
-   - `pairtools stats` + fastp/seqkit aggregation via MultiQC.
+8. **Generate stats and MultiQC**
+   - `pairtools stats` + fastp aggregation via MultiQC.
 
-10. **Bin to contact matrices**
+9. **Bin to contact matrices**
     - `.cool` via `cooler cload pairs`.
     - `.mcool` multi-resolution via `cooler zoomify`.
     - Optional `.hic` export hook via Juicer Tools.
 
-11. **Balance / normalize matrices**
+10. **Balance / normalize matrices**
     - balancing enabled during `cooler zoomify --balance`.
 
-12. **QC plots**
+11. **QC plots**
     - cis/trans proxy table.
     - distance-decay plot.
     - replicate concordance table scaffold.
     - matrix snapshot plot.
 
-13. **Downstream feature calling**
+12. **Downstream feature calling**
     - compartments (`cooltools eigs-cis`).
     - insulation/boundaries (`cooltools insulation`).
     - loops/dots (`cooltools dots`).
     - APA/pileup placeholder hook.
 
-14. **Differential / integrative analysis scaffold**
+13. **Differential / integrative analysis scaffold**
     - Produces a summary table with hooks to extend condition-wise differential analyses.
 
 ---
