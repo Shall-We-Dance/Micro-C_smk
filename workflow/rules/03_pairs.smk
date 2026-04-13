@@ -84,9 +84,10 @@ rule filter_pairs:
           EXPR="$EXPR and ((chrom1!=chrom2) or ((pos1-pos2>={params.min_dist}) or (pos2-pos1>={params.min_dist})))"
         fi
 
-        # capture stderr from both select and split in a single log
-        pairtools select "$EXPR" {input.dedup} 2>> {log} \
-          | pairtools split --output-pairs {output.pairs} >> {log} 2>&1
+        # parse_bam_to_pairs uses --drop-sam, so the stream already has pairs
+        # columns only. Write filtered pairs directly instead of piping through
+        # `pairtools split`, which expects sam columns and can fail.
+        pairtools select "$EXPR" {input.dedup} -o {output.pairs} > {log} 2>&1
 
         if [ -n "{params.blacklist}" ]; then
           pairtools restrict -f {params.blacklist} {output.pairs} -o {output.pairs}.tmp >> {log} 2>&1
