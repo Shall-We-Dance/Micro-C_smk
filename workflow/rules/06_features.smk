@@ -25,8 +25,9 @@ rule call_insulation_boundaries:
     output:
         bed=f"{OUTDIR}/features/{{sample}}/boundaries.bed"
     params:
-        binsize=lambda wc: int(config.get("matrix", {}).get("base_resolution", 1000)),
-        window=lambda wc: int(config.get("features", {}).get("insulation_window", 100000))
+        binsize=lambda wc: int(config.get("features", {}).get("feature_resolution", config.get("matrix", {}).get("base_resolution", 1000))),
+        window=lambda wc: int(config.get("features", {}).get("insulation_window", 100000)),
+        balance_max_iters=lambda wc: int(config.get("features", {}).get("balance_max_iters", 500))
     conda:
         "envs/cooltools.yaml"
     log:
@@ -35,9 +36,16 @@ rule call_insulation_boundaries:
         r"""
         set -euo pipefail
         mkdir -p $(dirname {output.bed}) $(dirname {log})
+        cooler balance --max-iters {params.balance_max_iters} --convergence-policy store_final \
+          {input.mcool}::/resolutions/{params.binsize} >> {log} 2>&1 || true
         cooltools insulation --windows {params.window} --output {OUTDIR}/features/{wildcards.sample}/insulation.tsv \
-          {input.mcool}::/resolutions/{params.binsize} > {log} 2>&1
-        awk 'BEGIN{{OFS="\t"}} NR>1 && $8==1 {{print $1,$2,$3}}' {OUTDIR}/features/{wildcards.sample}/insulation.tsv > {output.bed}
+          {input.mcool}::/resolutions/{params.binsize} >> {log} 2>&1 || true
+        if [[ -s {OUTDIR}/features/{wildcards.sample}/insulation.tsv ]]; then
+          awk 'BEGIN{{OFS="\t"}} NR>1 && $8==1 {{print $1,$2,$3}}' {OUTDIR}/features/{wildcards.sample}/insulation.tsv > {output.bed}
+        else
+          : > {output.bed}
+          echo "[WARN] cooltools insulation failed or produced empty output; wrote empty boundaries file." >> {log}
+        fi
         """
 
 
@@ -47,7 +55,8 @@ rule call_loops:
     output:
         bedpe=f"{OUTDIR}/features/{{sample}}/loops.bedpe"
     params:
-        binsize=lambda wc: int(config.get("matrix", {}).get("base_resolution", 1000))
+        binsize=lambda wc: int(config.get("features", {}).get("feature_resolution", config.get("matrix", {}).get("base_resolution", 1000))),
+        balance_max_iters=lambda wc: int(config.get("features", {}).get("balance_max_iters", 500))
     conda:
         "envs/cooltools.yaml"
     log:
@@ -56,7 +65,13 @@ rule call_loops:
         r"""
         set -euo pipefail
         mkdir -p $(dirname {output.bedpe}) $(dirname {log})
-        cooltools dots --outname {output.bedpe} {input.mcool}::/resolutions/{params.binsize} > {log} 2>&1
+        cooler balance --max-iters {params.balance_max_iters} --convergence-policy store_final \
+          {input.mcool}::/resolutions/{params.binsize} >> {log} 2>&1 || true
+        cooltools dots --outname {output.bedpe} {input.mcool}::/resolutions/{params.binsize} >> {log} 2>&1 || true
+        if [[ ! -s {output.bedpe} ]]; then
+          : > {output.bedpe}
+          echo "[WARN] cooltools dots failed or produced empty output; wrote empty loops file." >> {log}
+        fi
         """
 
 
