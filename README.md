@@ -1,8 +1,8 @@
-# Micro-C Snakemake Pipeline (distiller-nf style)
+# Micro-C Snakemake Pipeline
 
 A modular Snakemake implementation for end-to-end Micro-C processing, from raw FASTQ to matrices, QC, and downstream feature calling.
 
-## Implemented workflow modules
+## Overview
 
 1. **Sample sheet / metadata validation**
    - Validates paired-end lane definitions from `config.yaml`.
@@ -88,7 +88,7 @@ Edit `config.yaml`:
 ## Run
 
 ```bash
-snakemake -s workflow/Snakefile --use-conda --cores 16
+snakemake -s workflow/Snakefile --use-conda --cores 32
 ```
 
 Dry-run:
