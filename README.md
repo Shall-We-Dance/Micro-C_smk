@@ -58,6 +58,8 @@ Edit `config.yaml` before running the workflow:
 - `alignment.aligner`: `bwa-mem2` (default) or `bwa-mem`.
 - `pairs.filter.*`: filtering thresholds and optional blacklist/short-cis settings.
 - `matrix.*`: matrix resolutions and optional `.hic` conversion settings.
+- `features.feature_resolution`: resolution used for loop/boundary calling (recommended to use coarser bins than matrix base resolution for sparse data).
+- `features.balance_max_iters`: max iterations for ICE balancing before feature calling.
 
 ## Quick Start
 

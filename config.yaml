@@ -48,3 +48,5 @@ matrix:
 
 features:
   insulation_window: 100000
+  feature_resolution: 5000
+  balance_max_iters: 500
