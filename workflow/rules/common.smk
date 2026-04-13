@@ -1,5 +1,3 @@
-import os
-
 SAMPLES = sorted(list(config["samples"].keys()))
 OUTDIR = config.get("output", {}).get("dir", "results")
 REF = config.get("reference", {})
