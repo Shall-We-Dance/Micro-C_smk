@@ -1,67 +1,37 @@
 # Micro-C Snakemake Pipeline
 
-A modular Snakemake implementation for end-to-end Micro-C processing, from raw FASTQ to matrices, QC, and downstream feature calling.
+A modular Snakemake workflow for end-to-end Micro-C data processing, from raw FASTQ files to normalized contact matrices, quality metrics, and downstream feature outputs.
 
 ## Overview
 
-### Inputs
+This repository is designed for reproducible Micro-C analysis with clear stage separation and configuration-driven execution.
 
-### Outputs
+## Inputs
+
+- `config.yaml` with sample metadata and pipeline parameters.
+- Reference resources (`reference.*`), including indexed FASTA and chromosome sizes.
+- Paired-end FASTQ files declared under `samples.*`.
+
+## Outputs
+
+- Validated sample metadata tables.
+- Trimmed reads and alignment outputs.
+- Parsed, sorted, deduplicated, and filtered pairs.
+- Contact matrices (`.cool`, `.mcool`) and optional `.hic` exports.
+- QC summaries and MultiQC reports.
+- Feature-level outputs (for example compartments, insulation, dots).
 
 ## Pipeline Steps
 
-1. **Sample sheet / metadata validation**
-   - Validates paired-end lane definitions from `config.yaml`.
-   - Writes `results/metadata/sample_sheet.validated.tsv`.
+1. Validate sample sheet and metadata.
+2. Trim adapters and low-quality bases (`fastp`).
+3. Align reads to the reference genome (`bwa mem` or `bwa-mem2 mem`).
+4. Parse alignments into contact pairs (`pairtools parse`).
+5. Sort, deduplicate, and filter pairs (`pairtools sort/dedup`).
+6. Build contact matrices and multiresolution outputs (`cooler`).
+7. Generate QC summaries and downstream feature results.
 
-2. **Adapter / quality trimming**
-   - `fastp` at sample-level (after lane concatenation).
-
-3. **Alignment to genome (BWA-MEM/BWA-MEM2)**
-   - Configurable aligner: `bwa mem` or `bwa-mem2 mem`.
-   - Name-sorted BAM output.
-
-4. **Parse BAM/SAM to contact pairs**
-   - `pairtools parse`.
-
-5. **Sort pairs**
-   - `pairtools sort`.
-
-6. **Deduplicate pairs**
-   - `pairtools dedup` with per-sample dedup stats.
-
-7. **Filter pairs**
-   - Keep unique/high-quality contacts (`pair_type==UU`, MAPQ threshold).
-   - Optional blacklist restriction.
-   - Optional short-cis artifact filtering.
-
-8. **Generate stats and MultiQC**
-   - `pairtools stats` + fastp aggregation via MultiQC.
-
-9. **Bin to contact matrices**
-    - `.cool` via `cooler cload pairs`.
-    - `.mcool` multi-resolution via `cooler zoomify`.
-    - Optional `.hic` export hook via Juicer Tools.
-
-10. **Balance / normalize matrices**
-    - balancing enabled during `cooler zoomify --balance`.
-
-11. **QC plots**
-    - cis/trans proxy table.
-    - distance-decay plot.
-    - replicate concordance table scaffold.
-    - matrix snapshot plot.
-
-12. **Downstream feature calling**
-    - compartments (`cooltools eigs-cis`).
-    - insulation/boundaries (`cooltools insulation`).
-    - loops/dots (`cooltools dots`).
-    - APA/pileup placeholder hook.
-
-13. **Differential / integrative analysis scaffold**
-    - Produces a summary table with hooks to extend condition-wise differential analyses.
-
-## Repository layout
+## Repository Structure
 
 ```text
 workflow/
@@ -80,22 +50,21 @@ workflow/
 
 ## Configuration
 
-Edit `config.yaml`:
+Edit `config.yaml` before running the workflow:
 
-- `reference.bwa_indexed_fasta`: indexed FASTA path.
-- `reference.chrom_sizes`: chromosome sizes for pairtools/cooler.
-- `samples.<sample>.R1/R2`: lane-level FASTQ lists.
+- `reference.*`: genome references and chromosome size files.
+- `samples.*`: per-sample R1/R2 FASTQ lane lists.
 - `alignment.aligner`: `bwa-mem2` (default) or `bwa-mem`.
-- `pairs.filter.*`: filtering logic (MAPQ, blacklist, short-distance artifact threshold).
-- `matrix.*`: base resolution, multires resolutions, optional hic export.
+- `pairs.filter.*`: filtering thresholds and optional blacklist/short-cis settings.
+- `matrix.*`: matrix resolutions and optional `.hic` conversion settings.
 
-## Running the workflow
+## Quick Start
 
 ```bash
 snakemake -s workflow/Snakefile --use-conda --cores 32
 ```
 
-Dry-run:
+Dry run:
 
 ```bash
 snakemake -s workflow/Snakefile -n
@@ -103,5 +72,5 @@ snakemake -s workflow/Snakefile -n
 
 ## Notes
 
-- This is designed to be extensible in a distiller-nf-like style while staying idiomatic to Snakemake.
-- Some advanced modules (replicate concordance metrics, APA, differential statistics) are provided as explicit scaffolds/placeholders and can be upgraded with project-specific methods.
+- The workflow is intentionally modular so project-specific methods can be added with minimal changes.
+- Advanced analyses can be extended from the existing rule scaffolds.
