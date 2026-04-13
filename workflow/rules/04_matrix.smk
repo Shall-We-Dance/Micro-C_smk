@@ -86,8 +86,6 @@ rule optional_hic_export:
 rule multiqc:
     input:
         expand(f"{OUTDIR}/qc/fastp/{{sample}}/fastp.html", sample=SAMPLES),
-        expand(f"{OUTDIR}/qc/seqkit/{{sample}}/raw.seqkit.stats.tsv", sample=SAMPLES),
-        expand(f"{OUTDIR}/qc/seqkit/{{sample}}/clean.seqkit.stats.tsv", sample=SAMPLES),
         expand(f"{OUTDIR}/stats/pairtools/{{sample}}.filtered.stats.txt", sample=SAMPLES),
         expand(f"{OUTDIR}/stats/pairtools/{{sample}}.dedup.stats.txt", sample=SAMPLES)
     output:
