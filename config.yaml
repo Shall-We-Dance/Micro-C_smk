@@ -1,26 +1,61 @@
+output:
+  dir: results
+
 threads:
   fastp: 8
-  samtools: 8
   seqkit: 4
+  bwa: 16
+  pairtools: 12
+  cooler: 8
 
 reference:
+  bwa_indexed_fasta: /path/to/genome.fa
+  chrom_sizes: /path/to/genome.chrom.sizes
+
+alignment:
+  aligner: bwa-mem2   # bwa-mem2 or bwa-mem
 
 samples:
-  sampleA:
+  sampleA_rep1:
+    condition: A
     R1:
-      - "raw/sampleA_L001_R1.fastq.gz"
-      - "raw/sampleA_L002_R1.fastq.gz"
+      - raw/sampleA_rep1_L001_R1.fastq.gz
+      - raw/sampleA_rep1_L002_R1.fastq.gz
     R2:
-      - "raw/sampleA_L001_R2.fastq.gz"
-      - "raw/sampleA_L002_R2.fastq.gz"
+      - raw/sampleA_rep1_L001_R2.fastq.gz
+      - raw/sampleA_rep1_L002_R2.fastq.gz
 
-  sampleB:
+  sampleA_rep2:
+    condition: A
     R1:
-      - "raw/sampleB_R1.fastq.gz"
+      - raw/sampleA_rep2_R1.fastq.gz
     R2:
-      - "raw/sampleB_R2.fastq.gz"
+      - raw/sampleA_rep2_R2.fastq.gz
+
+  sampleB_rep1:
+    condition: B
+    R1:
+      - raw/sampleB_rep1_R1.fastq.gz
+    R2:
+      - raw/sampleB_rep1_R2.fastq.gz
 
 fastp:
-  # dedup + adapter trimming
   dedup_adapter:
     dedup: true
+    detect_adapter_for_pe: true
+
+pairs:
+  filter:
+    min_mapq: 30
+    max_cis_artifact_dist: 1000
+    enable_blacklist: false
+    blacklist_bed: ""
+
+matrix:
+  base_resolution: 1000
+  resolutions: [1000, 2000, 5000, 10000, 20000, 50000, 100000]
+  export_hic: false
+  juicer_tools_jar: ""
+
+features:
+  insulation_window: 100000

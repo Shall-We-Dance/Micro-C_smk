@@ -1,5 +1,5 @@
-name: qc
+name: hic-tools
 channels: [conda-forge, bioconda]
 dependencies:
-  - fastp
-  - seqkit
+  - openjdk
+  - pairix
