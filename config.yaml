@@ -47,6 +47,7 @@ matrix:
   juicer_tools_jar: ""
 
 features:
+  compartment_resolutions: [5000]
   insulation_window: 100000
   feature_resolution: 5000
   balance_max_iters: 500

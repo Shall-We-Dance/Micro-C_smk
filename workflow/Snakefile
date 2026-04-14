@@ -21,7 +21,11 @@ rule all:
         expand(f"{OUTDIR}/qc/fastp/{{sample}}/fastp.html", sample=SAMPLES),
         expand(f"{OUTDIR}/pairs/filtered/{{sample}}.filtered.pairs.gz", sample=SAMPLES),
         expand(f"{OUTDIR}/matrices/{{sample}}.mcool", sample=SAMPLES),
-        expand(f"{OUTDIR}/features/{{sample}}/compartments.bedgraph", sample=SAMPLES),
+        expand(
+            f"{OUTDIR}/features/{{sample}}/compartments_{{res}}bp.bedgraph",
+            sample=SAMPLES,
+            res=COMPARTMENT_RESOLUTIONS,
+        ),
         expand(f"{OUTDIR}/features/{{sample}}/boundaries.bed", sample=SAMPLES),
         expand(f"{OUTDIR}/features/{{sample}}/loops.bedpe", sample=SAMPLES),
         f"{OUTDIR}/integrative/differential_summary.tsv",
