@@ -3,7 +3,11 @@ rule differential_integrative_summary:
         mcools=expand(f"{OUTDIR}/matrices/{{sample}}.mcool", sample=SAMPLES),
         loops=expand(f"{OUTDIR}/features/{{sample}}/loops.bedpe", sample=SAMPLES),
         boundaries=expand(f"{OUTDIR}/features/{{sample}}/boundaries.bed", sample=SAMPLES),
-        compartments=expand(f"{OUTDIR}/features/{{sample}}/compartments.bedgraph", sample=SAMPLES),
+        compartments=expand(
+            f"{OUTDIR}/features/{{sample}}/compartments_{{res}}bp.bedgraph",
+            sample=SAMPLES,
+            res=COMPARTMENT_RESOLUTIONS,
+        ),
         concordance=f"{OUTDIR}/qc/plots/replicate_concordance.tsv"
     output:
         summary=f"{OUTDIR}/integrative/differential_summary.tsv"
