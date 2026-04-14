@@ -2,20 +2,52 @@ rule call_compartments:
     input:
         mcool=f"{OUTDIR}/matrices/{{sample}}.mcool"
     output:
-        bedgraph=f"{OUTDIR}/features/{{sample}}/compartments.bedgraph"
+        bedgraph=f"{OUTDIR}/features/{{sample}}/compartments_{{res}}bp.bedgraph"
     params:
-        binsize=lambda wc: int(config.get("matrix", {}).get("base_resolution", 1000))
+        binsize=lambda wc: int(wc.res),
+        fasta=lambda wc: config.get("reference", {}).get("bwa_indexed_fasta", "")
     conda:
         "envs/cooltools.yaml"
     log:
-        f"logs/features/compartments/{{sample}}.log"
+        f"logs/features/compartments/{{sample}}.{{res}}bp.log"
     shell:
         r"""
         set -euo pipefail
         mkdir -p $(dirname {output.bedgraph}) $(dirname {log})
-        cooltools eigs-cis --n-eigs 3 --out-prefix {OUTDIR}/features/{wildcards.sample}/eigs \
-          {input.mcool}::/resolutions/{params.binsize} > {log} 2>&1
-        awk 'BEGIN{{OFS="\t"}} NR>1 {{print $1,$2,$3,$5}}' {OUTDIR}/features/{wildcards.sample}/eigs.cis.vecs.tsv > {output.bedgraph}
+        python - <<'PY' > {log} 2>&1
+import cooler
+import cooltools
+import bioframe
+import pandas as pd
+
+if not "{params.fasta}":
+    raise ValueError("reference.bwa_indexed_fasta is required for compartment GC phasing")
+
+clr = cooler.Cooler("{input.mcool}::/resolutions/{params.binsize}")
+bins = clr.bins()[:][["chrom", "start", "end"]]
+genome = bioframe.load_fasta("{params.fasta}")
+gc_cov = bioframe.frac_gc(bins, genome)
+
+view_df = pd.DataFrame(
+    {{
+        "chrom": clr.chromnames,
+        "start": 0,
+        "end": clr.chromsizes.values,
+        "name": clr.chromnames,
+    }}
+)
+
+cis_eigs = cooltools.eigs_cis(
+    clr,
+    gc_cov,
+    view_df=view_df,
+    n_eigs=3,
+)
+eigenvector_track = cis_eigs[1][["chrom", "start", "end", "E1"]]
+eigenvector_track = eigenvector_track.sort_values(["chrom", "start"])
+eigenvector_track.to_csv("{output.bedgraph}", sep="\t", header=False, index=False)
+print(f"Saved to: {output.bedgraph}")
+PY
         """
 
 
