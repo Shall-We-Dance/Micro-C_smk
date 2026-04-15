@@ -58,13 +58,14 @@ rule zoomify_mcool:
 
 rule optional_hic_export:
     input:
-        pairs=f"{OUTDIR}/pairs/filtered/{{sample}}.filtered.pairs.gz"
+        mcool=f"{OUTDIR}/matrices/{{sample}}.mcool"
     output:
         hic=f"{OUTDIR}/matrices/{{sample}}.hic"
     params:
         enabled=EXPORT_HIC,
-        juicer_jar=lambda wc: config.get("matrix", {}).get("juicer_tools_jar", ""),
-        chromsizes=lambda wc: REF["chrom_sizes"]
+        threads=HIC_EXPORT_THREADS,
+        tmpdir=HIC_EXPORT_TMPDIR
+    threads: HIC_EXPORT_THREADS
     conda:
         "envs/hic_tools.yaml"
     log:
@@ -73,9 +74,13 @@ rule optional_hic_export:
         r"""
         set -euo pipefail
         mkdir -p $(dirname {output.hic}) $(dirname {log})
-        if [ "{params.enabled}" = "True" ] && [ -n "{params.juicer_jar}" ]; then
-          pairix -f {input.pairs}
-          java -jar {params.juicer_jar} pre -q {MIN_MAPQ} {input.pairs} {output.hic} {params.chromsizes} > {log} 2>&1
+        if [ "{params.enabled}" = "True" ]; then
+          tmp_opt=""
+          if [ -n "{params.tmpdir}" ]; then
+            mkdir -p "{params.tmpdir}"
+            tmp_opt="--tmpdir {params.tmpdir}"
+          fi
+          hictk convert {input.mcool} {output.hic} --threads {params.threads} $tmp_opt > {log} 2>&1
         else
           echo "hic export disabled" > {log}
           touch {output.hic}
