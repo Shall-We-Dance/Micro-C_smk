@@ -17,7 +17,7 @@ This repository is designed for reproducible Micro-C analysis with clear stage s
 - Validated sample metadata tables.
 - Trimmed reads and alignment outputs.
 - Parsed, sorted, deduplicated, and filtered pairs.
-- Contact matrices (`.cool`, `.mcool`) and optional `.hic` exports.
+- Contact matrices (`.cool`, `.mcool`) and optional `.hic` exports (via `hictk`).
 - QC summaries and MultiQC reports.
 - Feature-level outputs (for example compartments, insulation, dots).
 
@@ -57,7 +57,7 @@ Edit `config.yaml` before running the workflow:
 - `samples.*`: per-sample R1/R2 FASTQ lane lists.
 - `alignment.aligner`: `bwa-mem2` (default) or `bwa-mem`.
 - `pairs.filter.*`: filtering thresholds and optional blacklist/short-cis settings.
-- `matrix.*`: matrix resolutions and optional `.hic` conversion settings.
+- `matrix.*`: matrix resolutions and optional `.hic` conversion settings (`hictk convert` with configurable threads/tmpdir).
 - `features.compartment_resolutions`: one or multiple resolutions (bp) used for A/B compartment calling (`[5000]` by default).
 - `features.feature_resolution`: resolution used for loop/boundary calling (recommended to use coarser bins than matrix base resolution for sparse data).
 - `features.balance_max_iters`: max iterations for ICE balancing before feature calling.

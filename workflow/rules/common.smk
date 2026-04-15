@@ -19,3 +19,5 @@ BLACKLIST_BED = FILTER_CFG.get("blacklist_bed", "")
 BLACKLIST_ENABLED = bool(FILTER_CFG.get("enable_blacklist", False) and BLACKLIST_BED)
 
 EXPORT_HIC = bool(config.get("matrix", {}).get("export_hic", False))
+HIC_EXPORT_THREADS = int(config.get("matrix", {}).get("hic_threads", THREADS.get("cooler", 8)))
+HIC_EXPORT_TMPDIR = str(config.get("matrix", {}).get("hic_tmpdir", "")).strip()

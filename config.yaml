@@ -44,7 +44,8 @@ matrix:
   base_resolution: 1000
   resolutions: [1000, 2000, 5000, 10000, 20000, 50000, 100000]
   export_hic: false
-  juicer_tools_jar: ""
+  hic_threads: 8
+  hic_tmpdir: ""
 
 features:
   compartment_resolutions: [5000]
