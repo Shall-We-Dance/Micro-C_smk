@@ -21,6 +21,7 @@ rule all:
         expand(f"{OUTDIR}/qc/fastp/{{sample}}/fastp.html", sample=SAMPLES),
         expand(f"{OUTDIR}/pairs/filtered/{{sample}}.filtered.pairs.gz", sample=SAMPLES),
         expand(f"{OUTDIR}/matrices/{{sample}}.mcool", sample=SAMPLES),
+        expand(f"{OUTDIR}/matrices/{{sample}}.hic", sample=SAMPLES) if EXPORT_HIC else [],
         expand(
             f"{OUTDIR}/features/{{sample}}/compartments_{{res}}bp.bedgraph",
             sample=SAMPLES,
