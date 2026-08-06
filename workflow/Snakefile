@@ -2,6 +2,11 @@ import os
 
 configfile: "config.yaml"
 
+# Pass HDF5_USE_FILE_LOCKING through to jobs: cooler/h5py locks the same .mcool
+# from multiple parallel jobs (qc plots, features) causing BlockingIOError.
+envvars:
+    "HDF5_USE_FILE_LOCKING"
+
 SAMPLES = sorted(list(config["samples"].keys()))
 OUTDIR = config.get("output", {}).get("dir", "results")
 
@@ -20,6 +25,8 @@ rule all:
         f"{OUTDIR}/metadata/sample_sheet.validated.tsv",
         expand(f"{OUTDIR}/qc/fastp/{{sample}}/fastp.html", sample=SAMPLES),
         expand(f"{OUTDIR}/pairs/filtered/{{sample}}.filtered.pairs.gz", sample=SAMPLES),
+        expand(f"{OUTDIR}/pairs/filtered/{{sample}}.filtered.pairs.gz.px2", sample=SAMPLES),
+        expand(f"{OUTDIR}/stats/pairtools/{{sample}}.filtered.stats.txt", sample=SAMPLES),
         expand(f"{OUTDIR}/matrices/{{sample}}.mcool", sample=SAMPLES),
         expand(f"{OUTDIR}/matrices/{{sample}}.hic", sample=SAMPLES) if EXPORT_HIC else [],
         expand(
@@ -27,7 +34,15 @@ rule all:
             sample=SAMPLES,
             res=COMPARTMENT_RESOLUTIONS,
         ),
+        expand(f"{OUTDIR}/features/{{sample}}/expected_cis_{FEATURE_RESOLUTION}bp.tsv", sample=SAMPLES),
+        expand(f"{OUTDIR}/features/{{sample}}/insulation.tsv", sample=SAMPLES),
         expand(f"{OUTDIR}/features/{{sample}}/boundaries.bed", sample=SAMPLES),
         expand(f"{OUTDIR}/features/{{sample}}/loops.bedpe", sample=SAMPLES),
+        expand(f"{OUTDIR}/features/{{sample}}/apa.png", sample=SAMPLES),
+        expand(f"{OUTDIR}/features/{{sample}}/apa.tsv", sample=SAMPLES),
+        expand(f"{OUTDIR}/qc/plots/{{sample}}/cis_trans.tsv", sample=SAMPLES),
+        expand(f"{OUTDIR}/qc/plots/{{sample}}/distance_decay.png", sample=SAMPLES),
+        expand(f"{OUTDIR}/qc/plots/{{sample}}/matrix_snapshot.png", sample=SAMPLES),
+        f"{OUTDIR}/qc/plots/replicate_concordance.tsv",
         f"{OUTDIR}/integrative/differential_summary.tsv",
         f"{OUTDIR}/qc/multiqc/multiqc_report.html"

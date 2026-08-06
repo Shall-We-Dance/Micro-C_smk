@@ -1,4 +1,4 @@
 name: qc
 channels: [conda-forge, bioconda]
 dependencies:
-  - fastp
+  - fastp==1.3.2=h43da1c4_0

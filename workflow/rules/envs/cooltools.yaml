@@ -2,8 +2,14 @@ name: cooltools
 channels: [conda-forge, bioconda]
 dependencies:
   - python=3.11
-  - cooler
-  - cooltools
-  - coolpuppy
-  - matplotlib
-  - pandas
+  - cooler==0.10.4=pyhdfd78af_0
+  - cooltools==0.7.1=py311h93dcfea_3
+  - coolpuppy==1.1.0=pyh086e186_0
+  - matplotlib==3.10.8=py311h38be061_0
+  # coolpuppy 1.1.0 uses label-based integer indexing (e.g. region[0]) which
+  # breaks under pandas 3.x (verified with the installed pandas 3.0.2).
+  # pandas 2.2.3 is the last line compatible with coolpuppy 1.1.0 and
+  # cooltools 0.7.1.
+  - pandas==2.2.3
+  - scipy==1.17.1=py311hbe70eeb_0
+  - bioframe==0.8.0=pyhdfd78af_0

@@ -17,38 +17,82 @@ alignment:
 samples:
   sampleA:
     R1:
-      - raw/sampleA_rep1_L001_R1.fastq.gz
-      - raw/sampleA_rep1_L002_R1.fastq.gz
+      - raw/sampleA_rep1_R1.fastq.gz
     R2:
-      - raw/sampleA_rep1_L001_R2.fastq.gz
-      - raw/sampleA_rep1_L002_R2.fastq.gz
-
-  sampleB:
-    R1:
-      - raw/sampleB_rep1_R1.fastq.gz
-    R2:
-      - raw/sampleB_rep1_R2.fastq.gz
+      - raw/sampleA_rep1_R2.fastq.gz
 
 fastp:
-  dedup: true
+  # Read-level PCR dedup (fastp --dedup) is NOT standard practice for Hi-C/
+  # Micro-C: distiller-nf dedups only at the pair level (pairtools dedup).
+  # fastp --dedup is RAM-hungry and can remove genuine ligation products that
+  # share identical read sequences, so it is disabled by default.
+  dedup: false
   detect_adapter: true
 
 pairs:
+  dedup:
+    # Max mismatch (bp) allowed on either side for two pairs to count as
+    # duplicates. distiller-nf uses 1; pairtools default is 3.
+    max_mismatch: 1
   filter:
     min_mapq: 30
-    max_cis_artifact_dist: 1000
+    # CAUTION: this threshold drops ALL cis contacts whose mapped ends are
+    # closer than `max_cis_artifact_dist` bp. It was designed for Hi-C
+    # (6-cutter) where short-cis pairs are mostly self-circularized fragments.
+    # Micro-C fragments are ~100-1000 bp, so <1kb cis contacts are predominantly
+    # REAL signal (adjacent-nucleosome contacts). With Micro-C, leaving this at
+    # 1000 removes ~2/3 of all contacts (verified on a shallow dm6 library).
+    # Keep it 0 for Micro-C.
+    max_cis_artifact_dist: 0
     enable_blacklist: false
     blacklist_bed: ""
+    # Restrict to uniquely-mapped read pairs only (pair_type=="UU"). Set to
+    # false (recommended, distiller-parity) to also keep UR/RU pairs: these are
+    # RESCUED single-ligation products (a chimeric read whose 3' part was
+    # rescued by pairtools parse), i.e. real contacts, ~30% more usable pairs.
+    require_unique: false
 
 matrix:
   base_resolution: 1000
-  resolutions: [1000, 2000, 5000, 10000, 20000, 50000, 100000]
+  # base_resolution must be a common denominator of all entries (1000 divides
+  # all). 250kb-10Mb levels mirror distiller-nf's output. 500kb is also used
+  # by qc.replicate_concordance.
+  resolutions: [1000, 2000, 5000, 10000, 20000, 50000, 100000, 250000, 500000, 1000000, 2500000, 5000000, 10000000]
+  # Assembly name stamped into .cool metadata via `cooler cload --assembly`.
+  # Leave empty ("") to skip.
+  assembly: dm6
+  # Threads for `cooler zoomify --nproc` (multi-level balancing).
+  zoomify_threads: 8
+  # Contigs shorter than this are dropped from expected/insulation/QC/feature
+  # analysis (dm6 chrom.sizes has ~1860 tiny chrUn contigs that crash
+  # cooltools insulation and produce NaN compartment bins).
+  min_chrom_size: 1000000
   export_hic: false
   hic_threads: 8
   hic_tmpdir: ""
 
 features:
+  # resolutions at which to call A/B compartments (used by call_compartments)
   compartment_resolutions: [5000]
   insulation_window: 100000
   feature_resolution: 5000
   balance_max_iters: 500
+  # flank (bp) around loop anchors for coolpuppy APA pileups
+  apa_flank: 100000
+
+qc:
+  # Resolutions (bp) at which replicate concordance (genome-wide Pearson /
+  # Spearman of balanced cis matrices) is computed. Resolutions must exist in
+  # matrix.resolutions.
+  concordance_resolutions: [100000, 500000]
+
+# Differential analysis (requires >= 2 groups; each sample must appear in
+# exactly one group). Leave empty to skip differential matrix/compartment
+# comparisons.
+groups: {}
+#  groups:
+#    wildtype:
+#      - sampleA
+#      - sampleB
+#    knockout:
+#      - sampleC

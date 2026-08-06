@@ -1,20 +1,3 @@
-rule pairs_stats:
-    input:
-        pairs=f"{OUTDIR}/pairs/filtered/{{sample}}.filtered.pairs.gz"
-    output:
-        stats=f"{OUTDIR}/stats/pairtools/{{sample}}.filtered.stats.txt"
-    conda:
-        "envs/pairtools.yaml"
-    log:
-        f"logs/pairtools/stats/{{sample}}.log"
-    shell:
-        r"""
-        set -euo pipefail
-        mkdir -p $(dirname {output.stats}) $(dirname {log})
-        pairtools stats {input.pairs} > {output.stats} 2> {log}
-        """
-
-
 rule pairs_to_cool:
     input:
         pairs=f"{OUTDIR}/pairs/filtered/{{sample}}.filtered.pairs.gz"
@@ -22,7 +5,8 @@ rule pairs_to_cool:
         cool=f"{OUTDIR}/matrices/{{sample}}.cool"
     params:
         binsize=lambda wc: int(config.get("matrix", {}).get("base_resolution", 1000)),
-        chromsizes=lambda wc: REF["chrom_sizes"]
+        chromsizes=lambda wc: REF["chrom_sizes"],
+        assembly=ASSEMBLY
     threads: int(THREADS.get("cooler", 8))
     conda:
         "envs/cooltools.yaml"
@@ -32,7 +16,11 @@ rule pairs_to_cool:
         r"""
         set -euo pipefail
         mkdir -p $(dirname {output.cool}) $(dirname {log})
-        cooler cload pairs -c1 2 -p1 3 -c2 4 -p2 5 {params.chromsizes}:{params.binsize} {input.pairs} {output.cool} \
+        assembly_arg=""
+        if [ -n "{params.assembly}" ]; then
+          assembly_arg="--assembly {params.assembly}"
+        fi
+        cooler cload pairs $assembly_arg -c1 2 -p1 3 -c2 4 -p2 5 {params.chromsizes}:{params.binsize} {input.pairs} {output.cool} \
           > {log} 2>&1
         """
 
@@ -43,7 +31,9 @@ rule zoomify_mcool:
     output:
         mcool=f"{OUTDIR}/matrices/{{sample}}.mcool"
     params:
-        resolutions=PAIR_RES_CSV
+        resolutions=PAIR_RES_CSV,
+        threads=ZOOMIFY_THREADS
+    threads: ZOOMIFY_THREADS
     conda:
         "envs/cooltools.yaml"
     log:
@@ -52,7 +42,8 @@ rule zoomify_mcool:
         r"""
         set -euo pipefail
         mkdir -p $(dirname {output.mcool}) $(dirname {log})
-        cooler zoomify --resolutions {params.resolutions} --balance {input.cool} -o {output.mcool} > {log} 2>&1
+        cooler zoomify --nproc {params.threads} --resolutions {params.resolutions} --balance {input.cool} -o {output.mcool} \
+          > {log} 2>&1
         """
 
 

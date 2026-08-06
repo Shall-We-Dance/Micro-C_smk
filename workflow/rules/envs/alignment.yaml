@@ -1,6 +1,6 @@
 name: alignment
 channels: [conda-forge, bioconda]
 dependencies:
-  - bwa
-  - bwa-mem2
-  - samtools
+  - bwa==0.7.19=h577a1d6_1
+  - bwa-mem2==2.3=he70b90d_0
+  - samtools==1.23.1=ha83d96e_0
