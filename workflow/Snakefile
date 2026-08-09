@@ -1,5 +1,10 @@
 import os
 
+# Define a default before the envvars directive below: snakemake >= 9 raises a
+# WorkflowError at startup if an envvars entry is not already set in the
+# environment. Setting it here makes the workflow runnable out of the box.
+os.environ.setdefault("HDF5_USE_FILE_LOCKING", "FALSE")
+
 configfile: "config.yaml"
 
 # Pass HDF5_USE_FILE_LOCKING through to jobs: cooler/h5py locks the same .mcool
@@ -44,5 +49,7 @@ rule all:
         expand(f"{OUTDIR}/qc/plots/{{sample}}/distance_decay.png", sample=SAMPLES),
         expand(f"{OUTDIR}/qc/plots/{{sample}}/matrix_snapshot.png", sample=SAMPLES),
         f"{OUTDIR}/qc/plots/replicate_concordance.tsv",
+        f"{OUTDIR}/qc/plots/boundary_overlap.tsv",
+        f"{OUTDIR}/qc/plots/compartment_correlation.tsv",
         f"{OUTDIR}/integrative/differential_summary.tsv",
         f"{OUTDIR}/qc/multiqc/multiqc_report.html"

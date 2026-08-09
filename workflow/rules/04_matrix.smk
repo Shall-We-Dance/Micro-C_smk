@@ -4,7 +4,7 @@ rule pairs_to_cool:
     output:
         cool=f"{OUTDIR}/matrices/{{sample}}.cool"
     params:
-        binsize=lambda wc: int(config.get("matrix", {}).get("base_resolution", 1000)),
+        binsize=lambda wc: sample_base_resolution(wc.sample),
         chromsizes=lambda wc: REF["chrom_sizes"],
         assembly=ASSEMBLY
     threads: int(THREADS.get("cooler", 8))
@@ -31,7 +31,7 @@ rule zoomify_mcool:
     output:
         mcool=f"{OUTDIR}/matrices/{{sample}}.mcool"
     params:
-        resolutions=PAIR_RES_CSV,
+        resolutions=lambda wc: sample_resolutions_csv(wc.sample),
         threads=ZOOMIFY_THREADS
     threads: ZOOMIFY_THREADS
     conda:
