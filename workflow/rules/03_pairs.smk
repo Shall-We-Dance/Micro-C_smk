@@ -1,3 +1,5 @@
+import os
+
 rule split_bam_to_buckets:
     input:
         bam=f"{OUTDIR}/bam/{{sample}}.name_sorted.bam"
@@ -7,7 +9,10 @@ rule split_bam_to_buckets:
         n_buckets=PARSE_BUCKETS,
         read_threads=int(THREADS.get("pairtools", 12)),
         outdir=f"{OUTDIR}/pairs/buckets/{{sample}}"
-    threads: int(THREADS.get("pairtools", 12))
+    # Declared threads = pysam reader (read_threads) + each of the
+    # PARSE_BUCKETS writers using 2 BGZF compression threads each, matching
+    # the real CPU usage inside the rule.
+    threads: int(THREADS.get("pairtools", 12)) + 2 * PARSE_BUCKETS
     log:
         f"logs/pairtools/split/{{sample}}.log"
     conda:
@@ -51,8 +56,14 @@ rule parse_bam_bucket:
     output:
         pairsam=f"{OUTDIR}/pairs/buckets/{{sample}}/bucket.{{i}}.pairsam.gz"
     params:
-        chromsizes=lambda wc: REF["chrom_sizes"]
-    threads: 3   # 1 decompressor + 2 compressors
+        chromsizes=lambda wc: REF["chrom_sizes"],
+        # threads-1 compressors (1 decompressor), derived from the same config
+        # key as the threads directive (the `threads` variable is unavailable
+        # in params lambdas on current snakemake).
+        nproc_out=lambda wc: max(2, int(THREADS.get("pairtools", 12)) // 4) - 1
+    # 1 decompressor + (threads-1) compressors, so declared threads equal the
+    # real pairtools nproc usage.
+    threads: max(2, int(THREADS.get("pairtools", 12)) // 4)
     log:
         f"logs/pairtools/parse/{{sample}}/bucket.{{i}}.log"
     conda:
@@ -61,7 +72,7 @@ rule parse_bam_bucket:
         r"""
         set -euo pipefail
         mkdir -p $(dirname {output.pairsam}) $(dirname {log})
-        pairtools parse --chroms-path {params.chromsizes} --drop-sam --nproc-in 1 --nproc-out 2 \
+        pairtools parse --chroms-path {params.chromsizes} --drop-sam --nproc-in 1 --nproc-out {params.nproc_out} \
           --add-columns mapq --walks-policy mask \
           {input.bam} -o {output.pairsam} > {log} 2>&1
         """
@@ -83,19 +94,21 @@ rule parse_bam_to_pairs:
         # Concatenate bucket pairsams: keep the header of the first bucket,
         # strip the rest. The file is NOT position-sorted (buckets are in
         # read-name order) -- pairtools sort below restores the sort order.
-        python - <<'PY' > {log} 2>&1
-import gzip
+        # IMPORTANT: compress with pbgzip (BGZF) -- pairtools' readers require
+        # BGZF for .gz files; plain gzip (python gzip.open) is rejected by
+        # `pairtools sort` ("no header or is empty").
+        python - <<'PY' 2>> {log} | pbgzip -c -n 4 > {output.pairsam}
+import gzip, sys
 buckets = {input.buckets!r}
-with gzip.open("{output.pairsam}", "wt") as out:
-    for bi, path in enumerate(buckets):
-        with gzip.open(path, "rt") as fh:
-            for line in fh:
-                if line.startswith("#"):
-                    if bi == 0:
-                        out.write(line)
-                else:
-                    out.write(line)
-print("merged", len(buckets), "buckets into {output.pairsam}")
+for bi, path in enumerate(buckets):
+    with gzip.open(path, "rt") as fh:
+        for line in fh:
+            if line.startswith("#"):
+                if bi == 0:
+                    sys.stdout.write(line)
+            else:
+                sys.stdout.write(line)
+sys.stderr.write("merged " + str(len(buckets)) + " buckets into {output.pairsam}\n")
 PY
         """
 
@@ -128,7 +141,11 @@ rule dedup_pairs:
         dedup=f"{OUTDIR}/pairs/dedup/{{sample}}.dedup.pairsam.gz",
         stats=f"{OUTDIR}/stats/pairtools/{{sample}}.dedup.stats.txt"
     params:
-        max_mismatch=DEDUP_MAX_MISMATCH
+        max_mismatch=DEDUP_MAX_MISMATCH,
+        # Split the declared threads between the input and output pools;
+        # nproc_in + nproc_out == threads.
+        nproc_in=max(2, int(THREADS.get("pairtools", 8)) // 2),
+        nproc_out=int(THREADS.get("pairtools", 8)) - max(2, int(THREADS.get("pairtools", 8)) // 2)
     threads: int(THREADS.get("pairtools", 8))
     log:
         f"logs/pairtools/dedup/{{sample}}.log"
@@ -140,7 +157,7 @@ rule dedup_pairs:
         mkdir -p $(dirname {output.dedup}) $(dirname {output.stats}) $(dirname {log})
         # Same split as parse: in/out pools each get half the declared threads.
         pairtools dedup --mark-dups --max-mismatch {params.max_mismatch} --output-stats {output.stats} \
-          --nproc-in 6 --nproc-out 6 \
+          --nproc-in {params.nproc_in} --nproc-out {params.nproc_out} \
           {input} -o {output.dedup} > {log} 2>&1
         """
 
@@ -160,7 +177,8 @@ rule filter_pairs:
         min_dist=lambda wc: sample_max_cis_artifact_dist(wc.sample),
         require_unique=lambda wc: "UU" if (_sample_cfg(wc.sample).get("require_unique", REQUIRE_UNIQUE)) else "",
         blacklist=(BLACKLIST_BED if BLACKLIST_ENABLED else ""),
-        same_frag=lambda wc: sample_same_fragment_max_dist(wc.sample)
+        same_frag=lambda wc: sample_same_fragment_max_dist(wc.sample),
+        scripts_dir=lambda wc: os.path.abspath("workflow/scripts")
     shell:
         r"""
         set -euo pipefail
@@ -196,8 +214,57 @@ rule filter_pairs:
         # only. Write filtered pairs directly instead of `pairtools split`.
         pairtools select "$EXPR" {input.dedup} -o {output.pairs} > {log} 2>&1
 
+        # NOTE: blacklist filtering below is INTERVAL filtering -- a pair is
+        # dropped when chrom1/pos1 or chrom2/pos2 falls inside a blacklisted
+        # BED interval. Intervals are merged per chromosome BEFORE filtering
+        # so overlapping/nested intervals cannot shadow each other (review
+        # P1-4). `pairtools restrict` only ANNOTATES restriction fragments
+        # and does NOT remove pairs, so it must not be used here.
         if [ -n "{params.blacklist}" ]; then
-          pairtools restrict -f {params.blacklist} {output.pairs} -o {output.pairs}.tmp >> {log} 2>&1
+          python - <<'PY' >> {log} 2>&1
+import gzip, sys
+
+sys.path.insert(0, {params.scripts_dir!r})
+import blacklist as bl
+
+# Load BED intervals and MERGE them per chromosome BEFORE filtering: the
+# old per-interval lookup only checked the last interval with start <= pos,
+# so positions covered by nested/overlapping intervals were missed (e.g.
+# [0,100) and [50,60): pos 80 was reported as not blacklisted) -- review
+# P1-4. bl.merge_intervals collapses overlapping/nested intervals into
+# disjoint merged ones; bl.is_blacklisted then does an O(log n) lookup.
+raw = {{}}
+for bed in [{params.blacklist!r}]:
+    with open(bed) as fh:
+        for line in fh:
+            if not line.strip() or line.startswith("#"):
+                continue
+            fields = line.rstrip().split("\t")
+            if len(fields) < 3:
+                continue
+            raw.setdefault(fields[0], []).append((int(fields[1]), int(fields[2])))
+
+merged = {{chrom: bl.merge_intervals(iv) for chrom, iv in raw.items()}}
+
+def in_blacklist(chrom, pos):
+    iv = merged.get(chrom)
+    return iv is not None and bl.is_blacklisted(iv, pos)
+
+kept = removed = 0
+with gzip.open("{output.pairs}", "rt") as src, \
+     gzip.open("{output.pairs}.tmp", "wt", compresslevel=1) as dst:
+    for line in src:
+        if line.startswith("#"):
+            dst.write(line)
+            continue
+        fields = line.split("\t")
+        if in_blacklist(fields[1], int(fields[2])) or in_blacklist(fields[3], int(fields[4])):
+            removed += 1
+            continue
+        dst.write(line)
+        kept += 1
+print("blacklist interval filtering: kept %d pairs, removed %d pairs" % (kept, removed))
+PY
           mv {output.pairs}.tmp {output.pairs}
         fi
 

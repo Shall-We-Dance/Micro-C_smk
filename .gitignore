@@ -26,3 +26,17 @@ id_ed25519
 # Python cache
 __pycache__/
 *.py[cod]
+__pycache__/
+*.pyc
+# Local data and reference links
+data/
+references/
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+*.bam
+*.cram
+*.cool
+*.mcool
+*.hic

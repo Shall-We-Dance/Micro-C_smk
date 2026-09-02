@@ -7,7 +7,8 @@ A modular Snakemake workflow for end-to-end Micro-C (and Hi-C) data processing, 
 - Protocol-aware: `protocol: micro-c | hi-c` per sample (see `config.yaml`).
 - Parallel `pairtools parse` via read-name bucketing (~5.7x speedup measured on dm6).
 - Optional artifact filters: Hi-C short-cis/self-ligation removal, Micro-C same-fragment (unligated/self-ligated mono-nucleosome) removal.
-- QC: fastp, pairtools stats, distance decay, matrix snapshots, replicate concordance, cross-sample boundary overlap and A/B compartment correlation, MultiQC.
+- Single serial ICE-balancing rule: weights are verified `converged` (with cis-only fallback) or the workflow fails; no rule writes into the same matrix concurrently; HDF5 file locking is left enabled.
+- QC: fastp, pairtools stats, distance decay, matrix snapshots, distance-stratified replicate concordance (matched-depth, seeded), one-to-one boundary matching with precision/recall/F1, A/B compartment correlation, per-sample QC gates, run manifest, and MultiQC custom tables for all library and cross-sample metrics.
 
 ## Inputs
 
@@ -68,12 +69,20 @@ Edit `config.yaml` before running the workflow:
   (`hictk convert`).
 - `features.*`: compartment/loop/boundary calling parameters.
 - `qc.concordance_resolutions`: replicate concordance resolutions.
+- `qc.concordance_strata`: distance strata for stratified concordance.
+- `qc.boundary_tolerance_bp`: one-to-one boundary matching tolerance.
+- `qc.gates`: per-sample QC thresholds (min valid pairs / frac cis / max dups).
+- `balance.resolutions` / `balance.cis_only_fallback`: ICE-balancing control.
+- `differential.flip_min_e1`: |E1| threshold for compartment flip calls.
 
 ## Outputs
 
 - `results/qc/`: fastp reports, pairtools stats, per-sample QC tables/plots,
-  replicate concordance, cross-sample boundary overlap and compartment
-  correlation tables, MultiQC report.
+  distance-stratified replicate concordance, boundary precision/recall/F1
+  (one-to-one matching), compartment correlation tables, and a MultiQC report containing raw-pair yield, Q30, mapping, duplication, valid-pair yield, cis-distance fractions, boundary/loop counts, APA, and cross-sample metrics.
+- `results/report/`: QC gates (samples failing thresholds are marked
+  `failed/underpowered`), per-sample filter summary, run manifest (git commit,
+  config hash, reference checksums, per-sample parameters).
 - `results/pairs/`: filtered pairs (+ pairix index) and pairtools stats.
 - `results/matrices/`: `.cool` and `.mcool` contact matrices.
 - `results/features/`: A/B compartments (per-resolution bedgraph), expected

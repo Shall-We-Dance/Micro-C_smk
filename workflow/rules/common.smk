@@ -102,14 +102,33 @@ ZOOMIFY_THREADS = int(config.get("matrix", {}).get("zoomify_threads", THREADS.ge
 
 CONCORDANCE_RESOLUTIONS = sorted({int(r) for r in config.get("qc", {}).get("concordance_resolutions", [100000, 500000])})
 
+CONCORDANCE_STRATA = [
+    (int(lo), int(hi))
+    for lo, hi in config.get("qc", {}).get("concordance_strata", [[5000, 20000], [20000, 100000]])
+    if int(hi) == 0 or int(hi) > int(lo)
+]
+
+BOUNDARY_TOLERANCE_BP = int(config.get("qc", {}).get("boundary_tolerance_bp", 10000))
+
+QC_GATES = config.get("qc", {}).get("gates", {})
+
+BALANCE_CFG = config.get("balance", {})
+BALANCE_RESOLUTIONS = sorted({int(r) for r in BALANCE_CFG.get("resolutions", [5000])})
+BALANCE_CIS_ONLY_FALLBACK = bool(BALANCE_CFG.get("cis_only_fallback", True))
+BALANCE_MAX_ITERS = int(FEATURES_CFG.get("balance_max_iters", 500))
+
 APA_FLANK = int(FEATURES_CFG.get("apa_flank", 100000))
+APA_NSHIFTS = int(FEATURES_CFG.get("apa_nshifts", 100))
+COMPARTMENT_MIN_BINS_PER_CHROM = int(FEATURES_CFG.get("compartment_min_bins_per_chrom", 50))
+
+FLIP_MIN_E1 = float(config.get("differential", {}).get("flip_min_e1", 0.05))
+DIFFERENTIAL_INCLUDE_FAILED = bool(config.get("differential", {}).get("include_failed", False))
 
 GROUPS = config.get("groups", {})
 GROUPS = {str(g): list(s) for g, s in GROUPS.items() if s}
 if GROUPS:
     flat = [s for g in GROUPS.values() for s in g]
     assert len(flat) == len(set(flat)), "samples must not appear in more than one group"
-    assert set(flat) == set(SAMPLES), "groups must cover exactly the configured samples"
 
 EXPORT_HIC = bool(config.get("matrix", {}).get("export_hic", False))
 HIC_EXPORT_THREADS = int(config.get("matrix", {}).get("hic_threads", THREADS.get("cooler", 8)))
